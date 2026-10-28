@@ -3,6 +3,8 @@
 // JSON on stdout for agent consumption; --pretty for humans. Thin wrapper over
 // the HTTP API (api.ts) and server lifecycle (serve.ts) — never SQLite.
 import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import {
   DEFAULT_BASE_URL,
   briefContext,
@@ -439,7 +441,7 @@ function isConnRefused(e: unknown): boolean {
   return cause?.code === "ECONNREFUSED" || cause?.code === "ECONNRESET";
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   runCli(process.argv.slice(2)).catch((e: unknown) => {
     const err = isConnRefused(e)
       ? {
