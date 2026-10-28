@@ -48,6 +48,15 @@ describe("rerootDocuments", () => {
     expect(rerootDocuments(abs, "mcp/svc", "/repo/mcp/svc")[0].relativePath).toBe("mcp/svc/app.py");
   });
 
+  it("converts Windows indexer paths to git's forward slashes", () => {
+    const win: ScipDocument[] = [
+      { relativePath: "src\\pricing.ts", occurrences: [] },
+      { relativePath: "C:\\repo\\mcp\\svc\\app.py", occurrences: [] },
+    ];
+    expect(rerootDocuments(win, "", "C:\\repo")[0].relativePath).toBe("src/pricing.ts");
+    expect(rerootDocuments(win, "mcp/svc", "C:\\repo\\mcp\\svc")[1].relativePath).toBe("mcp/svc/app.py");
+  });
+
   it("is the identity for a repo-root job", () => {
     expect(rerootDocuments(tsDocs, "", "/repo").map((d) => d.relativePath)).toEqual(["src/a.ts"]);
   });

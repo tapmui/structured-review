@@ -679,13 +679,15 @@ function failureWarning({ job, error }: { job: IndexerJob; error: Error }): stri
 /**
  * Re-root one indexer job's documents to repo-relative paths. Each indexer
  * runs with cwd = its own root and emits paths relative to it (occasionally
- * absolute); the merged graph needs repo-relative paths for git diffs.
+ * absolute); the merged graph needs repo-relative paths for git diffs. Git
+ * paths always use `/`, so Windows indexer output (`src\a.ts`) is converted.
  */
 export function rerootDocuments(docs: ScipDocument[], jobRoot: string, absRoot: string): ScipDocument[] {
-  const absSlash = absRoot.endsWith("/") ? absRoot : `${absRoot}/`;
+  const posixRoot = absRoot.replaceAll("\\", "/");
+  const absSlash = posixRoot.endsWith("/") ? posixRoot : `${posixRoot}/`;
   const prefix = jobRoot ? `${jobRoot}/` : "";
   return docs.map((d) => {
-    let p = d.relativePath ?? "";
+    let p = (d.relativePath ?? "").replaceAll("\\", "/");
     if (p.startsWith(absSlash)) p = p.slice(absSlash.length);
     return { ...d, relativePath: `${prefix}${p}` };
   });
