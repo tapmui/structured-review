@@ -107,6 +107,7 @@ const SKILLS = [
 ];
 function generateSkill({ name, source }) {
   const generated = readFileSync(join(root, source), "utf8")
+    .replace(/\r\n/g, "\n") // a Windows checkout (core.autocrlf) has CRLF
     .replace(/^<!--[\s\S]*?-->\n/, "") // source-of-truth header comment
     .replace(/<!-- srev-invocation:start[\s\S]*?srev-invocation:end -->/, PLUGIN_INVOCATION)
     .replace(/<!-- plugin:language-support[^>]*-->\n/, `${LANGUAGE_SUPPORT}\n`);
