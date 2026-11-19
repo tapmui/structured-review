@@ -10,6 +10,18 @@ The map is built per session by the `component-map` skill. An LLM writes the
 model from index evidence; the hub checks it against the code's references and
 stores it only when it matches. The hub never calls a model.
 
+The skill builds the model top-down. It first lists what the system does, from
+the repository's design when there is one (OpenSpec specs and change designs,
+architecture documents, ADRs, the component manifest) and otherwise from the
+docs and the system's entry points, and then assigns the code to those
+responsibilities. Components are named for what they do; interfaces are named
+for the information that crosses them, with the transport recorded as `kind`.
+It decides where state lives, resolves siblings that require each other (by
+merging them, moving the edge, or recording the wrong direction as a fault), and
+reviews the names for channels and layers before it submits. The check proves
+the model matches the code; this process keeps it at a logical level. Where
+the code departs from the repository's design, the skill reports it.
+
 ## Using it
 
 Ask your agent, for example: "Use component-map to map this codebase and open
@@ -33,6 +45,19 @@ status bar links to it once a map exists. The map remembers, per session in
 the browser tab, the level, the selected element and the pan and zoom: after a
 visit to the code, the status bar link or the back button returns to the same
 view. A URL naming a different level opens that level at its default view.
+
+To share a map outside the hub, export it:
+
+```bash
+srev map export --session <id> --out component-map.html
+```
+
+The file is one self-contained HTML page (`GET /api/sessions/<id>/map/export`):
+the web build's export bundle (`packages/web/dist/export/`) inlined with the
+stored map, so it draws the map with no hub and no network access beyond the
+optional web fonts. It shows exactly what the check accepted; levels are kept
+in memory rather than in the URL, and a review map shows its change marks
+without the review's items.
 
 ## The model
 
@@ -106,6 +131,11 @@ view. A URL naming a different level opens that level at its default view.
   they connect.
 - **Undeclared uses** keep a requirer that uses an interface off its declared
   requirers, with a reason. They are drawn in red.
+- **Scoped undeclared uses** add `component`: a part inside a declared requirer
+  that should not use the interface. Only call sites from that part (or its own
+  parts) are undeclared; the requirer stays declared and its other call sites
+  stay ordinary. The requirer must be declared, and `component` must lie
+  strictly inside it.
 
 ## The check
 
@@ -124,7 +154,7 @@ The hub stores a map only when the check finds no issue:
 | model      | The model's structure: unknown ids, parent cycles, requirers that are not siblings, the utility and external rules                  |
 | coverage   | A reference between sibling components that no interface of the provider binds                                                      |
 | binding    | A bind entry that matches nothing or several files, or a symbol bound by two interfaces of one provider                             |
-| requirer   | A declared requirer of an in-process interface with no call sites                                                                   |
+| requirer   | A declared requirer of an in-process interface with no call sites, or with only call sites that scoped undeclared entries cover    |
 | undeclared | A requirer using an interface without being declared or listed as undeclared with a reason, or an undeclared entry with no such use |
 | evidence   | A cross-process interface without evidence files, or with files that do not exist or lie outside the components it connects         |
 | utility    | A utility calling a visible component                                                                                               |
@@ -197,4 +227,5 @@ whole-repository session (`--base empty`) maps the working tree.
 
 The page lays out diagrams with [elkjs](https://github.com/kieler/elkjs) 0.9.3,
 licensed under the Eclipse Public License 2.0. The web build ships its notice
-in `THIRD-PARTY-NOTICES.txt`.
+in `THIRD-PARTY-NOTICES.txt`, and an exported map page carries it in an HTML
+comment.
