@@ -16,7 +16,7 @@ overrides:
 
 patchedDependencies:
   '@sourcegraph/scip-python@0.6.6':
-    hash: 24a0d676adf528e7a95b5905a4bfa18e03ab81f476c5c4655073a38d799acf0e
+    hash: f4af8037a2f4a8b9c93156542cd6d4b1cf5650e42efb4437c21ee6fdd8521ccf
     path: patches/@sourcegraph__scip-python@0.6.6.patch
   '@stryker-mutator/vitest-runner@10.0.0':
     hash: c5d3810e13159e9c67687390d8208eec231506636bb575535fab8dd5ba14ebdc
@@ -97,7 +97,7 @@ importers:
         version: 1.32.1(zod@4.6.7)
       '@sourcegraph/scip-python':
         specifier: ^0.6.6
-        version: 0.6.6(patch_hash=24a0d676adf528e7a95b5905a4bfa18e03ab81f476c5c4655073a38d799acf0e)(@types/node@22.20.5)(typescript@7.0.2)
+        version: 0.6.6(patch_hash=f4af8037a2f4a8b9c93156542cd6d4b1cf5650e42efb4437c21ee6fdd8521ccf)(@types/node@22.20.5)(typescript@7.0.2)
       '@sourcegraph/scip-typescript':
         specifier: ^0.4.0
         version: 0.4.0
@@ -4068,7 +4068,7 @@ snapshots:
 
   '@sonarsource/analyzer-commons-configurations@2.31.0-5284': {}
 
-  '@sourcegraph/scip-python@0.6.6(patch_hash=24a0d676adf528e7a95b5905a4bfa18e03ab81f476c5c4655073a38d799acf0e)(@types/node@22.20.5)(typescript@7.0.2)':
+  '@sourcegraph/scip-python@0.6.6(patch_hash=f4af8037a2f4a8b9c93156542cd6d4b1cf5650e42efb4437c21ee6fdd8521ccf)(@types/node@22.20.5)(typescript@7.0.2)':
     dependencies:
       '@iarna/toml': 2.2.5
       command-exists: 1.2.9

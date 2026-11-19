@@ -3,7 +3,7 @@ set -euo pipefail
 
 readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 readonly REPO_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
-readonly OSV_SCANNER="$REPO_ROOT/.tools/security/bin/osv-scanner"
+source "$SCRIPT_DIR/tools.sh"
 readonly DATABASE_ROOT="$REPO_ROOT/.tools/security/osv-db"
 readonly FRESHNESS_FILE="$DATABASE_ROOT/UPDATED_AT"
 readonly MAX_AGE_SECONDS="${OSV_DATABASE_MAX_AGE_SECONDS:-604800}"

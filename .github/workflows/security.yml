@@ -35,7 +35,7 @@ jobs:
           path: |
             .tools/security/downloads
             .tools/security/pip-cache
-          key: security-tools-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('scripts/security/setup-tools.sh', 'security/semgrep-constraints.txt') }}
+          key: security-tools-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('scripts/security/setup-tools.sh', 'scripts/security/tools.sh', 'security/semgrep-constraints.txt') }}
 
       # These scripts need Node and the scanner tools, but no pnpm install,
       # application build, browser, or indexer toolchains.

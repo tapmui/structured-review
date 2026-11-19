@@ -67,7 +67,7 @@ jobs:
           path: |
             .tools/security/downloads
             .tools/security/pip-cache
-          key: security-tools-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('scripts/security/setup-tools.sh', 'security/semgrep-constraints.txt') }}
+          key: security-tools-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('scripts/security/setup-tools.sh', 'scripts/security/tools.sh', 'security/semgrep-constraints.txt') }}
 
       - name: Install pinned security tools
         run: pnpm security:setup

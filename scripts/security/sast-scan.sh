@@ -3,7 +3,7 @@ set -euo pipefail
 
 readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 readonly REPO_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
-readonly SEMGREP="$REPO_ROOT/.tools/security/bin/semgrep"
+source "$SCRIPT_DIR/tools.sh"
 if [[ $# -gt 0 ]]; then
   TARGETS=("$1")
 else
@@ -21,7 +21,7 @@ SEMGREP_SEND_METRICS=off \
 SEMGREP_SETTINGS_FILE="$REPO_ROOT/.tools/security/semgrep-settings.yml" \
 SEMGREP_LOG_FILE="$REPO_ROOT/.tools/security/semgrep.log" \
 XDG_CACHE_HOME="$REPO_ROOT/.tools/security/cache" \
-  "$SEMGREP" scan \
+  run_semgrep scan \
   --config "$REPO_ROOT/security/semgrep.yml" \
   --metrics off \
   --error \

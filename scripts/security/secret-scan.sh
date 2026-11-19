@@ -3,7 +3,7 @@ set -euo pipefail
 
 readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 readonly REPO_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
-readonly GITLEAKS="$REPO_ROOT/.tools/security/bin/gitleaks"
+source "$SCRIPT_DIR/tools.sh"
 readonly TARGET="${1:-$REPO_ROOT}"
 readonly REPORT="$(mktemp)"
 trap 'rm -f -- "$REPORT"' EXIT

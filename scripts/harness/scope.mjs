@@ -10,6 +10,7 @@ const shellEntrypoints = new Set([
   "scripts/security/sast-scan.sh",
   "scripts/security/secret-scan.sh",
   "scripts/security/setup-tools.sh",
+  "scripts/security/tools.sh",
   "scripts/security/update-advisories.sh",
 ]);
 function executable(path) {
