@@ -15,7 +15,12 @@ export interface BaseIndex {
   index: ReferenceIndex;
 }
 
-const QUIET = { encoding: "utf8" as const, stdio: ["ignore", "pipe", "pipe"] as ["ignore", "pipe", "pipe"] };
+// windowsHide: the detached hub has no console on Windows; see diff.ts QUIET.
+const QUIET = {
+  encoding: "utf8" as const,
+  stdio: ["ignore", "pipe", "pipe"] as ["ignore", "pipe", "pipe"],
+  windowsHide: true,
+};
 
 /** The git object type `sha` names in `root` (`commit`, `tree`, …), or null when it is missing. */
 export function objectType(sha: string, root: string): string | null {

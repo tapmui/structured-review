@@ -3,10 +3,11 @@ import { copyFileSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSyn
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { nodeBin } from "../../scripts/harness/node-bin.mjs";
 
 const REPOSITORY_ROOT = resolve(import.meta.dirname, "../..");
-const ESLINT = join(REPOSITORY_ROOT, "node_modules/.bin/eslint");
-const DEPCRUISE = join(REPOSITORY_ROOT, "node_modules/.bin/depcruise");
+const ESLINT = nodeBin("eslint", "eslint", REPOSITORY_ROOT);
+const DEPCRUISE = nodeBin("dependency-cruiser", "depcruise", REPOSITORY_ROOT);
 
 let fixtureRoot;
 
@@ -16,11 +17,12 @@ function write(relativePath, contents) {
   writeFileSync(path, contents);
 }
 
-function run(executable, args) {
-  const result = spawnSync(executable, args, {
+function run([node, entry], args) {
+  const result = spawnSync(node, [entry, ...args], {
     cwd: fixtureRoot,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
+    windowsHide: true,
   });
   if (result.error) throw result.error;
   return { status: result.status, stdout: result.stdout, stderr: result.stderr };

@@ -1,7 +1,7 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -34,9 +34,13 @@ for (const bin of ['scip-typescript', 'scip-python']) fs.writeFileSync('node_mod
 `,
     { mode: 0o755 },
   );
+  // Windows runs npm.cmd through a shell and ignores shebangs.
+  writeFileSync(join(dir, "bin/npm.cmd"), `@"${process.execPath}" "%~dp0npm" %*\r\n`);
+  // Windows spells the variable Path; keep a single PATH entry so the fake wins.
+  const inherited = Object.fromEntries(Object.entries(process.env).filter(([k]) => k.toUpperCase() !== "PATH"));
   env = {
-    ...process.env,
-    PATH: `${join(dir, "bin")}:${process.env.PATH}`,
+    ...inherited,
+    PATH: `${join(dir, "bin")}${delimiter}${process.env.PATH ?? process.env.Path ?? ""}`,
     SREV_DATA_DIR: join(dir, "writable data"),
     SREV_INDEXER_HOME: "",
     GRAPH_PROVIDER: "scip",
@@ -102,6 +106,18 @@ describe("portable plugin launcher", () => {
       CLAUDE_PLUGIN_DATA: join(dir, "claude data"),
     };
     expect(JSON.parse(run("serve")).data).toBe(env.PLUGIN_DATA);
+  });
+
+  it("fixes scip-python's path.sep regex in new and already-ready installs", () => {
+    run("serve");
+    const bundle = join(env.SREV_DATA_DIR!, "node_modules/@sourcegraph/scip-python/dist/scip-python.js");
+    mkdirSync(join(bundle, ".."), { recursive: true });
+    writeFileSync(bundle, 'const o=r(i(1017)),a=new RegExp(o.sep,"g");x.replace(a,".")');
+    run("serve");
+    expect(readFileSync(bundle, "utf8")).toBe('const o=r(i(1017)),a=/[\\\\/]/g;x.replace(a,".")');
+    run("serve"); // idempotent
+    expect(readFileSync(bundle, "utf8")).toBe('const o=r(i(1017)),a=/[\\\\/]/g;x.replace(a,".")');
+    expect(readFileSync(join(env.SREV_DATA_DIR!, "install-count"), "utf8")).toBe("1");
   });
 
   it("repairs an incomplete install even when its success marker survived", () => {

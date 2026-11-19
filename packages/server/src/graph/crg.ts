@@ -249,7 +249,7 @@ export class CrgGraphProvider implements GraphProvider {
 
 function detectRepoRoot(): string {
   try {
-    return execSync("git rev-parse --show-toplevel", { encoding: "utf8" }).trim();
+    return execSync("git rev-parse --show-toplevel", { encoding: "utf8", windowsHide: true }).trim();
   } catch {
     return process.cwd();
   }

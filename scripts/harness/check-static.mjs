@@ -4,6 +4,7 @@ import { spawnSync } from "node:child_process";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { lintFindings, knipFindings, newFindings } from "./debt.mjs";
+import { nodeBin } from "./node-bin.mjs";
 
 export async function collectStaticFindings(root) {
   const eslint = new ESLint({ cwd: root, errorOnUnmatchedPattern: false });
@@ -14,9 +15,12 @@ export async function collectStaticFindings(root) {
     "*.config.{mjs,ts}",
     ".dependency-cruiser.cjs",
   ]);
-  const knip = spawnSync("pnpm", ["exec", "knip", "--reporter", "json"], {
+  const [node, knipEntry] = nodeBin("knip", "knip", root);
+  const knip = spawnSync(node, [knipEntry, "--reporter", "json"], {
     cwd: root,
     encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+    windowsHide: true,
   });
   if (knip.error || ![0, 1].includes(knip.status)) throw new Error(`Knip unavailable: ${knip.stderr}`);
   return { lint: lintFindings(results, root), unused: knipFindings(JSON.parse(knip.stdout)) };

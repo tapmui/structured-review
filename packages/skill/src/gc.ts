@@ -5,7 +5,7 @@
 // (dead repos, stale state) — everything else still goes through the API.
 import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { probeHealth, resolveGitRoot, statePaths } from "./serve.js";
+import { probeHealth, resolveGitRoot, sameRepoRoot, statePaths } from "./serve.js";
 import { shutdownHub } from "./api.js";
 
 export interface GcRepoResult {
@@ -42,7 +42,7 @@ function repoStateFiles(repoRoot: string): string[] {
  *  Resolves once the port stops answering, so callers can delete DB files. */
 export async function stopHubIfServing(baseUrl: string, repoRoot: string): Promise<boolean> {
   const health = await probeHealth(baseUrl);
-  if (!health?.ok || health.repoRoot !== repoRoot) return false;
+  if (!health?.ok || !sameRepoRoot(health.repoRoot, repoRoot)) return false;
   try {
     await shutdownHub(baseUrl);
   } catch {

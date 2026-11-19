@@ -1,10 +1,14 @@
 // packages/skill/test/api.test.ts
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("node:child_process", () => ({ spawn: vi.fn(() => ({ unref: vi.fn() })), execFileSync: vi.fn() }));
+vi.mock("node:child_process", () => ({
+  spawn: vi.fn(() => ({ on: vi.fn(), unref: vi.fn() })),
+  execFileSync: vi.fn(),
+}));
 
 import {
   briefContext,
+  browserCommand,
   compactContext,
   createSession,
   writePlan,
@@ -84,6 +88,15 @@ describe("api client", () => {
 
   it("builds the UI url from the hub base", () => {
     expect(uiUrl(BASE, "s1")).toBe("http://localhost:3456/?session=s1");
+  });
+});
+
+describe("browserCommand", () => {
+  it("uses an executable on every platform (Windows start is a cmd builtin)", () => {
+    const url = "http://127.0.0.1:3456/?session=s1";
+    expect(browserCommand(url, "darwin")).toEqual(["open", [url]]);
+    expect(browserCommand(url, "linux")).toEqual(["xdg-open", [url]]);
+    expect(browserCommand(url, "win32")).toEqual(["rundll32", ["url.dll,FileProtocolHandler", url]]);
   });
 });
 

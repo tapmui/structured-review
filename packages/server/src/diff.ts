@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import type { AnchorSide, CommentAnchor, LineRange } from "./types.js";
 export type { AnchorSide, CommentAnchor, LineRange };
 
@@ -56,7 +56,12 @@ export class GitError extends Error {
 // Suppress inherited stderr on execFileSync calls: expected-failure paths
 // (bad refs, non-repo dirs) would otherwise flood test/CLI output with raw
 // git usage/error text. stdout still comes back as a string via `encoding`.
-const QUIET: { stdio: ["ignore", "pipe", "pipe"] } = { stdio: ["ignore", "pipe", "pipe"] };
+// windowsHide: the hub runs detached without a console on Windows, so each git
+// child would otherwise open (and flash) its own console window.
+const QUIET: { stdio: ["ignore", "pipe", "pipe"]; windowsHide: true } = {
+  stdio: ["ignore", "pipe", "pipe"],
+  windowsHide: true,
+};
 
 /**
  * The new-file line ranges actually touched by `git diff` for a file, or null
@@ -366,10 +371,14 @@ export function repoRoot(): string {
     process.env.CRG_REPO_ROOT ??
     (() => {
       try {
-        return execFileSync("git", ["rev-parse", "--show-toplevel"], {
-          encoding: "utf8",
-          ...QUIET,
-        }).trim();
+        // resolve(): git prints C:/x on Windows; report the native C:\x form,
+        // which is what the CLI compares against on /health.
+        return resolve(
+          execFileSync("git", ["rev-parse", "--show-toplevel"], {
+            encoding: "utf8",
+            ...QUIET,
+          }).trim(),
+        );
       } catch {
         return process.cwd();
       }
@@ -728,7 +737,12 @@ function readSlice(root: string, file: string, startLine: number, endLine: numbe
 /** Tracked files of the repository, repo-relative; undefined when git fails. */
 export function trackedFiles(root: string): string[] | undefined {
   try {
-    return execFileSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8", maxBuffer: 256 * 1024 * 1024 })
+    return execFileSync("git", ["ls-files", "-z"], {
+      windowsHide: true,
+      cwd: root,
+      encoding: "utf8",
+      maxBuffer: 256 * 1024 * 1024,
+    })
       .split("\0")
       .filter(Boolean);
   } catch {

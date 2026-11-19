@@ -46,6 +46,20 @@ function indexersPresent() {
   return ["scip-typescript", "scip-python"].every((bin) => existsSync(join(indexers, "node_modules", ".bin", bin)));
 }
 
+// scip-python (<= 0.6.8) builds `new RegExp(path.sep, "g")` when it loads. On
+// Windows path.sep is a single backslash, an invalid pattern, so the indexer
+// crashes before it starts. Match both separators instead: the paths it splits
+// come from pip RECORD files, which use "/" on every platform. The repository
+// applies the same change through patches/@sourcegraph__scip-python@*.patch.
+// Remove both once an upstream release no longer contains the pattern.
+const SCIP_PYTHON_SEP_REGEX = /new RegExp\([A-Za-z_$][\w$]*\.sep,\s*"g"\)/;
+function patchScipPython() {
+  const file = join(indexers, "node_modules", "@sourcegraph", "scip-python", "dist", "scip-python.js");
+  if (!existsSync(file)) return;
+  const text = readFileSync(file, "utf8");
+  if (SCIP_PYTHON_SEP_REGEX.test(text)) writeFileSync(file, text.replace(SCIP_PYTHON_SEP_REGEX, "/[\\\\/]/g"));
+}
+
 try {
   if (needsIndexers && (!env.GRAPH_PROVIDER || env.GRAPH_PROVIDER === "scip")) {
     if (process.env.SREV_INDEXER_HOME && indexers !== data) {
@@ -71,6 +85,7 @@ try {
           env,
           stdio: ["ignore", 2, 2],
           shell: win,
+          windowsHide: true,
         });
         if (install.error || install.status !== 0 || !indexersPresent()) {
           throw new Error(
@@ -80,6 +95,8 @@ try {
         // Only record success after npm and the executable checks succeed.
         writeFileSync(marker, key);
       }
+      // Also runs on ready installs, so ones made before this fix get repaired.
+      patchScipPython();
     }
   }
   if (!setup) {

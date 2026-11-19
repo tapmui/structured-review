@@ -3,6 +3,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { runChecks } from "./runner.mjs";
+import { pnpmCommand } from "./node-bin.mjs";
 
 export function verificationNames({ strict, full }) {
   const names = [
@@ -26,7 +27,15 @@ export function verificationNames({ strict, full }) {
 export function spawnCommand([command, ...args], log = console.log, cwd) {
   return new Promise((finish) => {
     log(`\n--- ${args.at(-1)} ---`);
-    const child = spawn(command, args, { cwd, stdio: "inherit" });
+    // Run pnpm through its JS entry when started by pnpm; a bare "pnpm" on
+    // Windows is pnpm.cmd, which only starts through a shell.
+    const [file, ...prefix] = command === "pnpm" ? pnpmCommand() : [command];
+    const child = spawn(file, [...prefix, ...args], {
+      cwd,
+      stdio: "inherit",
+      shell: process.platform === "win32" && file === "pnpm",
+      windowsHide: true,
+    });
     child.on("error", () => finish(1));
     child.on("exit", (code) => finish(code ?? 1));
   });

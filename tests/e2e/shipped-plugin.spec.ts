@@ -43,9 +43,13 @@ test.afterAll(async () => {
 });
 
 async function selectFirstChangedNode(page: Page): Promise<void> {
+  // The walk order needs the call flows. Enabled chips are not proof of that:
+  // until /flows answers, the plan draws a flow unit from its nodes, so wait for
+  // the response itself (it can arrive well after /nodes, e.g. on Windows).
+  const flowsLoaded = page.waitForResponse((r) => new URL(r.url()).pathname.endsWith("/flows") && r.ok());
   await page.goto(session.uiUrl);
+  await flowsLoaded;
   await expect(page.getByText("Plan", { exact: true })).toBeVisible();
-  // The walk order needs flows and nodes too; an enabled changed chip means both have loaded.
   await expect(page.locator("button.step--changed:not([disabled])").first()).toBeVisible();
   await page.keyboard.press("j");
   await expect(page.locator('tr[data-line-type="added"]').first()).toBeVisible();
@@ -142,5 +146,6 @@ test("shipped CLI rejects invalid bases and refuses a hub for a different reposi
   }
   expect(wrongRepo?.code).not.toBe(0);
   expect(wrongRepo?.stderr).toContain("port is occupied by a hub serving");
-  expect(wrongRepo?.stderr).toContain(review.repo);
+  // stderr is JSON, so Windows backslashes in the path arrive escaped.
+  expect(wrongRepo?.stderr).toContain(JSON.stringify(review.repo).slice(1, -1));
 });

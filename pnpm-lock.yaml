@@ -15,6 +15,9 @@ overrides:
   source-map-js@<1.2.2: 1.2.2
 
 patchedDependencies:
+  '@sourcegraph/scip-python@0.6.6':
+    hash: 24a0d676adf528e7a95b5905a4bfa18e03ab81f476c5c4655073a38d799acf0e
+    path: patches/@sourcegraph__scip-python@0.6.6.patch
   '@stryker-mutator/vitest-runner@10.0.0':
     hash: c5d3810e13159e9c67687390d8208eec231506636bb575535fab8dd5ba14ebdc
     path: patches/@stryker-mutator__vitest-runner@10.0.0.patch
@@ -94,7 +97,7 @@ importers:
         version: 1.32.1(zod@4.6.7)
       '@sourcegraph/scip-python':
         specifier: ^0.6.6
-        version: 0.6.6(@types/node@22.20.5)(typescript@7.0.2)
+        version: 0.6.6(patch_hash=24a0d676adf528e7a95b5905a4bfa18e03ab81f476c5c4655073a38d799acf0e)(@types/node@22.20.5)(typescript@7.0.2)
       '@sourcegraph/scip-typescript':
         specifier: ^0.4.0
         version: 0.4.0
@@ -4065,7 +4068,7 @@ snapshots:
 
   '@sonarsource/analyzer-commons-configurations@2.31.0-5284': {}
 
-  '@sourcegraph/scip-python@0.6.6(@types/node@22.20.5)(typescript@7.0.2)':
+  '@sourcegraph/scip-python@0.6.6(patch_hash=24a0d676adf528e7a95b5905a4bfa18e03ab81f476c5c4655073a38d799acf0e)(@types/node@22.20.5)(typescript@7.0.2)':
     dependencies:
       '@iarna/toml': 2.2.5
       command-exists: 1.2.9
@@ -4415,7 +4418,7 @@ snapshots:
       obug: 3.0.0
       std-env: 4.3.0
       tinyrainbow: 3.2.0
-      vitest: 5.0.5(@types/node@26.6.3)(@vitest/coverage-v8@5.0.5)(jsdom@30.1.3)(vite@8.3.4(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+      vitest: 5.0.5(@types/node@22.20.5)(@vitest/coverage-v8@5.0.5)(jsdom@30.1.3)(vite@8.3.4(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
 
   '@vitest/istanbul-lib-coverage@1.0.2': {}
 

@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { artifactDifferences, snapshotArtifacts } from "./artifacts.mjs";
+import { nodeBin } from "./node-bin.mjs";
 
 const artifactPaths = [
   "plugin/dist",
@@ -15,11 +16,14 @@ const artifactPaths = [
 ];
 export function buildPluginArtifacts(root, output) {
   const webDist = join(output, "web-dist");
+  const web = join(root, "packages/web");
+  const [node, viteEntry] = nodeBin("vite", "vite", web);
   const vite = (args) =>
-    execFileSync("pnpm", ["--filter", "@srev/web", "exec", "vite", "build", ...args, "--emptyOutDir"], {
-      cwd: root,
+    execFileSync(node, [viteEntry, "build", ...args, "--emptyOutDir"], {
+      cwd: web,
       env: { ...process.env, NODE_ENV: "production" },
       stdio: "inherit",
+      windowsHide: true,
     });
   // The hub's UI, then the exported map page bundle inside it (as `pnpm build` does).
   vite(["--outDir", webDist]);

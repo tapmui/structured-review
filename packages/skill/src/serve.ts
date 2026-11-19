@@ -3,7 +3,7 @@
 // occupied by anything else, otherwise spawn the built server detached.
 import { execFileSync, spawn } from "node:child_process";
 import { closeSync, existsSync, mkdirSync, openSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve, win32 } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export interface Health {
@@ -21,12 +21,29 @@ export interface ServeResult {
   logFile?: string;
 }
 
+/** Repo root in the platform's native form. On Windows git prints C:/x/y,
+ *  while the hub and Node report C:\x\y; resolve() gives one form. */
 export function resolveGitRoot(dir: string): string {
+  let root: string;
   try {
-    return execFileSync("git", ["rev-parse", "--show-toplevel"], { cwd: dir, encoding: "utf8" }).trim();
+    root = execFileSync("git", ["rev-parse", "--show-toplevel"], {
+      cwd: dir,
+      encoding: "utf8",
+      windowsHide: true,
+    }).trim();
   } catch {
     throw new Error(`not a git repository: ${dir}`);
   }
+  return resolve(root);
+}
+
+/** Whether two repo roots name the same directory. Windows paths are
+ *  case-insensitive and either separator may appear. */
+export function sameRepoRoot(a: string | undefined, b: string, platform = process.platform): boolean {
+  if (a === undefined) return false;
+  if (platform !== "win32") return a === b;
+  const norm = (p: string) => win32.resolve(p).toLowerCase();
+  return norm(a) === norm(b);
 }
 
 export async function probeHealth(base: string): Promise<Health | null> {
@@ -44,7 +61,7 @@ export type ServeAction = { action: "reuse" } | { action: "spawn" } | { action: 
 /** Pure reuse/spawn/conflict decision, given the probe result and the wanted repo root. */
 export function decideServe(health: Health | null, wantRoot: string): ServeAction {
   if (health === null) return { action: "spawn" };
-  if (health.ok && health.repoRoot === wantRoot) return { action: "reuse" };
+  if (health.ok && sameRepoRoot(health.repoRoot, wantRoot)) return { action: "reuse" };
   const serving = health.repoRoot
     ? `a hub serving ${health.repoRoot}`
     : "something that answers /health without a repoRoot";
@@ -71,7 +88,7 @@ export function serverEntryPath(): string {
 /** State key for one repo under SREV_DATA_DIR: repo name + path hash. Shared by
  *  serve and gc so the two can never disagree on which files belong to a repo. */
 export function repoStateKey(repoRoot: string): string {
-  const name = repoRoot.split("/").filter(Boolean).pop() ?? "repo";
+  const name = repoRoot.split(/[\\/]/).filter(Boolean).pop() ?? "repo";
   let hash = 0;
   for (let i = 0; i < repoRoot.length; i++) hash = (hash * 31 + repoRoot.charCodeAt(i)) >>> 0;
   return `${name.replace(/[^A-Za-z0-9._-]+/g, "-")}-${hash.toString(16)}`;
@@ -114,6 +131,8 @@ export async function ensureServer(opts: { repo: string; port: number }): Promis
       ...(dbPath ? { SREV_DB_PATH: dbPath } : {}),
     },
     detached: true,
+    // Without this, Windows opens a console window for the detached hub.
+    windowsHide: true,
     stdio: ["ignore", logFd, logFd],
   });
   child.unref();
@@ -124,7 +143,7 @@ export async function ensureServer(opts: { repo: string; port: number }): Promis
   while (Date.now() < deadline) {
     const h = await probeHealth(baseUrl);
     if (h?.ok) {
-      if (h.repoRoot !== repoRoot) {
+      if (!sameRepoRoot(h.repoRoot, repoRoot)) {
         throw new Error(`hub came up serving ${h.repoRoot ?? "unknown"}, expected ${repoRoot} — see ${logFile}`);
       }
       return {

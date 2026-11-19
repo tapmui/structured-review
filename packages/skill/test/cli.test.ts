@@ -1,8 +1,9 @@
 // packages/skill/test/cli.test.ts — pure pieces of the CLI: arg parsing,
 // the serve reuse/spawn/conflict decision, and response shaping.
 import { describe, it, expect, afterEach, vi } from "vitest";
+import { join } from "node:path";
 import { parseCliArgs, planOutput, prettyBrief, runCli } from "../src/cli.js";
-import { decideServe, statePaths } from "../src/serve.js";
+import { decideServe, repoStateKey, sameRepoRoot, statePaths } from "../src/serve.js";
 
 describe("parseCliArgs", () => {
   it("joins positionals into a command and collects value flags", () => {
@@ -98,17 +99,39 @@ describe("statePaths", () => {
   });
 
   it("keeps state in the repo without SREV_DATA_DIR", () => {
-    expect(statePaths("/home/x/repo")).toEqual({ logDir: "/home/x/repo/.srev" });
+    expect(statePaths("/home/x/repo")).toEqual({ logDir: join("/home/x/repo", ".srev") });
   });
 
   it("keys DB and logs by repo name + path hash under the data dir", () => {
     process.env.SREV_DATA_DIR = "/data";
     const a = statePaths("/home/x/repo");
     const b = statePaths("/home/y/repo"); // same basename, different path
-    expect(a.dbPath).toMatch(/^\/data\/db\/repo-[0-9a-f]+\.db$/);
-    expect(a.logDir).toMatch(/^\/data\/logs\/repo-[0-9a-f]+$/);
+    const key = repoStateKey("/home/x/repo");
+    expect(a.dbPath).toBe(join("/data", "db", `${key}.db`));
+    expect(a.logDir).toBe(join("/data", "logs", key));
     expect(a.dbPath).not.toBe(b.dbPath);
     expect(statePaths("/home/x/repo")).toEqual(a); // deterministic
+  });
+});
+
+describe("sameRepoRoot", () => {
+  it("compares exactly on POSIX", () => {
+    expect(sameRepoRoot("/home/x/repo", "/home/x/repo", "linux")).toBe(true);
+    expect(sameRepoRoot("/home/x/Repo", "/home/x/repo", "linux")).toBe(false);
+    expect(sameRepoRoot(undefined, "/home/x/repo", "linux")).toBe(false);
+  });
+
+  it("ignores separator and case differences on Windows", () => {
+    expect(sameRepoRoot("C:\\Users\\x\\repo", "C:/Users/x/repo", "win32")).toBe(true);
+    expect(sameRepoRoot("c:\\users\\x\\repo\\", "C:/Users/x/repo", "win32")).toBe(true);
+    expect(sameRepoRoot("C:\\Users\\x\\other", "C:/Users/x/repo", "win32")).toBe(false);
+  });
+});
+
+describe("repoStateKey", () => {
+  it("names the key after the last path segment for either separator", () => {
+    expect(repoStateKey("/home/x/my repo")).toMatch(/^my-repo-[0-9a-f]+$/);
+    expect(repoStateKey("C:\\Users\\x\\my repo")).toMatch(/^my-repo-[0-9a-f]+$/);
   });
 });
 

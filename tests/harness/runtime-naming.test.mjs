@@ -2,7 +2,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, cpSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
@@ -14,7 +14,19 @@ function temporary() {
   scratch.push(path);
   return path;
 }
-afterEach(() => {
+// rmSync's maxRetries does not cover this EPERM on Windows (Node 24), so poll.
+async function removeWhenUnlocked(path, deadline = Date.now() + 10_000) {
+  for (;;) {
+    try {
+      rmSync(path, { recursive: true, force: true });
+      return;
+    } catch (error) {
+      if (Date.now() > deadline) throw error;
+      await new Promise((done) => setTimeout(done, 100));
+    }
+  }
+}
+afterEach(async () => {
   process.argv = argv;
   process.exitCode = exitCode;
   vi.unstubAllEnvs();
@@ -22,7 +34,9 @@ afterEach(() => {
   vi.doUnmock("node:url");
   vi.doUnmock("node:child_process");
   vi.resetModules();
-  for (const path of scratch.splice(0)) rmSync(path, { recursive: true, force: true });
+  // `srev shutdown` returns before the hub exits; on Windows its cwd and open DB
+  // keep the workspace locked for a moment, so retry EPERM/EBUSY briefly.
+  for (const path of scratch.splice(0)) await removeWhenUnlocked(path);
 });
 
 it("builds installable host packages whose renamed CLI and launcher both execute", async () => {
@@ -106,7 +120,9 @@ it("bootstraps indexers into the renamed data directory before dispatching", asy
     `#!${process.execPath}\nconst fs=require('node:fs');fs.mkdirSync('node_modules/.bin',{recursive:true});for(const bin of ['scip-typescript','scip-python'])fs.writeFileSync('node_modules/.bin/'+bin,'ready');`,
     { mode: 0o755 },
   );
-  vi.stubEnv("PATH", `${bin}:${process.env.PATH}`);
+  // Windows runs npm.cmd through a shell and ignores shebangs.
+  writeFileSync(join(bin, "npm.cmd"), `@"${process.execPath}" "%~dp0npm" %*\r\n`);
+  vi.stubEnv("PATH", `${bin}${delimiter}${process.env.PATH}`);
   process.argv = [process.execPath, "srev.mjs", "serve"];
   await import("../../scripts/plugin-launcher.mjs");
   const data = join(output, "xdg/structured-review");

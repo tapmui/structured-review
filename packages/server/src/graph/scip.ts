@@ -32,6 +32,7 @@ import {
   SCIP_DOTNET_INSTALL_HINT,
 } from "./scip-dotnet.js";
 import { synthesizeCsharpSpans } from "./csharp-spans.js";
+import { pythonEnvironmentArgs } from "./python-env.js";
 import { resolveNamespaceMembers } from "./namespace-members.js";
 import { buildReferenceIndex, unindexedGaps, type ReferenceIndex } from "./references.js";
 import { isTestFile } from "../util.js";
@@ -440,7 +441,12 @@ export class ScipGraphProvider implements GraphProvider {
     try {
       try {
         const cmd = this.indexerCommand(job, absRoot, indexPath);
-        execFileSync(cmd.argv0, cmd.args, { cwd: absRoot, encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
+        execFileSync(cmd.argv0, cmd.args, {
+          cwd: absRoot,
+          encoding: "utf8",
+          maxBuffer: 256 * 1024 * 1024,
+          windowsHide: true,
+        });
       } catch (e) {
         if (e instanceof IndexError) throw e;
         const err = e as Error & { stderr?: unknown };
@@ -487,7 +493,16 @@ export class ScipGraphProvider implements GraphProvider {
       const projectName = job.root.replace(/[^A-Za-z0-9._-]+/g, "-") || "repo";
       return {
         argv0: process.execPath,
-        args: [binJs, "index", ".", "--output", indexPath, "--project-name", projectName],
+        args: [
+          binJs,
+          "index",
+          ".",
+          "--output",
+          indexPath,
+          "--project-name",
+          projectName,
+          ...pythonEnvironmentArgs(dirname(indexPath)),
+        ],
       };
     }
     if (job.language === "java") {

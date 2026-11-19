@@ -130,7 +130,12 @@ describe("BaseIndexes and the user's git setup", () => {
       mode: 0o755,
     });
     const config = join(home, "gitconfig");
-    writeFileSync(config, `[core]\n\thooksPath = ${hooks}\n[filter "lfs"]\n\tclean = cat\n\tsmudge = ${smudge}\n`);
+    // git config treats "\" as an escape, so write Windows paths with "/".
+    const gitPath = (p: string) => p.replaceAll("\\", "/");
+    writeFileSync(
+      config,
+      `[core]\n\thooksPath = ${gitPath(hooks)}\n[filter "lfs"]\n\tclean = cat\n\tsmudge = ${gitPath(smudge)}\n`,
+    );
     const gitEnv = { GIT_CONFIG_GLOBAL: config, GIT_CONFIG_NOSYSTEM: "1" };
     const lfsRepo = join(home, "repo");
     mkdirSync(lfsRepo);

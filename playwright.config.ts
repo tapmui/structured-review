@@ -8,7 +8,8 @@ export default defineConfig({
   expect: { timeout: 15_000, toHaveScreenshot: { animations: "disabled" } },
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
   outputDir: "test-results/playwright",
-  snapshotPathTemplate: "{testDir}/{testFileDir}/{testFileName}-snapshots/{arg}-{projectName}{ext}",
+  // One baseline per OS: font rendering differs (Windows draws the anchor chip 3px wider than Linux).
+  snapshotPathTemplate: "{testDir}/{testFileDir}/{testFileName}-snapshots/{arg}-{projectName}-{platform}{ext}",
   use: {
     ...devices["Desktop Chrome"],
     trace: "retain-on-failure",

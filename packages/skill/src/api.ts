@@ -468,7 +468,18 @@ export function launchUI(base: string, sessionId: string): void {
   openInBrowser(uiUrl(base, sessionId));
 }
 
+/** argv that opens url in the default browser. Windows `start` is a cmd.exe
+ *  builtin, not an executable; rundll32 opens the URL without a shell. */
+export function browserCommand(url: string, platform = process.platform): [string, string[]] {
+  if (platform === "darwin") return ["open", [url]];
+  if (platform === "win32") return ["rundll32", ["url.dll,FileProtocolHandler", url]];
+  return ["xdg-open", [url]];
+}
+
 export function openInBrowser(url: string): void {
-  const cmd = process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
-  spawn(cmd, [url], { detached: true, stdio: "ignore" }).unref();
+  const [cmd, args] = browserCommand(url);
+  const child = spawn(cmd, args, { detached: true, stdio: "ignore", windowsHide: true });
+  // A missing opener must not crash the CLI; the URL is in its output anyway.
+  child.on("error", () => {});
+  child.unref();
 }

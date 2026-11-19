@@ -4,7 +4,10 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-vi.mock("node:child_process", () => ({ spawn: vi.fn(() => ({ unref: vi.fn() })), execFileSync: vi.fn() }));
+vi.mock("node:child_process", () => ({
+  spawn: vi.fn(() => ({ on: vi.fn(), unref: vi.fn() })),
+  execFileSync: vi.fn(),
+}));
 
 import { spawn } from "node:child_process";
 import {

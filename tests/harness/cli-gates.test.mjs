@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
+import { pathToFileURL } from "node:url";
 import { checkCoverageCli, checkCoverageMain } from "../../scripts/harness/check-coverage.mjs";
 import { checkStaticCli, checkStaticMain } from "../../scripts/harness/check-static.mjs";
 import { buildPluginArtifacts, checkArtifactsCli, checkArtifactsMain } from "../../scripts/harness/check-artifacts.mjs";
@@ -211,6 +212,10 @@ describe("verify CLI gate", () => {
 });
 
 describe("direct CLI adapters", () => {
+  const entryPath = join(tmpdir(), "gate.mjs");
+  const otherPath = join(tmpdir(), "other.mjs");
+  const metaUrl = pathToFileURL(entryPath).href;
+
   for (const [name, entry] of [
     ["coverage", checkCoverageCli],
     ["static", checkStaticCli],
@@ -219,14 +224,12 @@ describe("direct CLI adapters", () => {
   ]) {
     it(`runs ${name} only when its module is the direct entry point`, async () => {
       const main = vi.fn(() => 7);
-      expect(await entry({ metaUrl: "file:///tmp/gate.mjs", argv: [], main })).toBeUndefined();
-      expect(
-        await entry({ metaUrl: "file:///tmp/gate.mjs", argv: [process.execPath, "/tmp/other.mjs"], main }),
-      ).toBeUndefined();
+      expect(await entry({ metaUrl, argv: [], main })).toBeUndefined();
+      expect(await entry({ metaUrl, argv: [process.execPath, otherPath], main })).toBeUndefined();
       expect(
         await entry({
-          metaUrl: "file:///tmp/gate.mjs",
-          argv: [process.execPath, "/tmp/gate.mjs", "--strict"],
+          metaUrl,
+          argv: [process.execPath, entryPath, "--strict"],
           root: "/tmp/root",
           main,
         }),

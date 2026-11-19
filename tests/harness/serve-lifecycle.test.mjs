@@ -14,8 +14,9 @@ vi.mock("node:fs", async (original) => {
   return {
     ...actual,
     existsSync: (path) => {
-      if (String(path).endsWith("/src/server.js")) return scenario.sibling;
-      if (String(path).endsWith("/server/dist/index.js")) return !scenario.missing;
+      const posix = String(path).replaceAll("\\", "/");
+      if (posix.endsWith("/src/server.js")) return scenario.sibling;
+      if (posix.endsWith("/server/dist/index.js")) return !scenario.missing;
       return actual.existsSync(path);
     },
   };
@@ -102,7 +103,7 @@ it("reports invalid repos, unsuccessful health responses and missing builds", as
   scenario.missing = true;
   await expect(ensureServer({ repo: directory, port: 3456 })).rejects.toThrow("server not built");
   scenario.sibling = true;
-  expect(serverEntryPath()).toMatch(/\/src\/server.js$/);
+  expect(serverEntryPath()).toMatch(/[\\/]src[\\/]server.js$/);
   expect(repoStateKey("/")).toMatch(/^repo-/);
 });
 

@@ -5,6 +5,8 @@ const require = __createRequire(import.meta.url);
 
 // packages/skill/src/cli.ts
 import { readFileSync as readFileSync3 } from "node:fs";
+import { resolve as resolve3 } from "node:path";
+import { pathToFileURL } from "node:url";
 
 // packages/skill/src/api.ts
 import { spawn } from "node:child_process";
@@ -193,9 +195,17 @@ function uiUrl(base, sessionId) {
 function launchUI(base, sessionId) {
   openInBrowser(uiUrl(base, sessionId));
 }
+function browserCommand(url, platform = process.platform) {
+  if (platform === "darwin") return ["open", [url]];
+  if (platform === "win32") return ["rundll32", ["url.dll,FileProtocolHandler", url]];
+  return ["xdg-open", [url]];
+}
 function openInBrowser(url) {
-  const cmd = process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
-  spawn(cmd, [url], { detached: true, stdio: "ignore" }).unref();
+  const [cmd, args] = browserCommand(url);
+  const child = spawn(cmd, args, { detached: true, stdio: "ignore", windowsHide: true });
+  child.on("error", () => {
+  });
+  child.unref();
 }
 
 // packages/skill/src/status.ts
@@ -250,14 +260,26 @@ function waitConditionMet(until, status, commentCount) {
 // packages/skill/src/serve.ts
 import { execFileSync, spawn as spawn2 } from "node:child_process";
 import { closeSync, existsSync, mkdirSync, openSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve, win32 } from "node:path";
 import { fileURLToPath } from "node:url";
 function resolveGitRoot(dir) {
+  let root;
   try {
-    return execFileSync("git", ["rev-parse", "--show-toplevel"], { cwd: dir, encoding: "utf8" }).trim();
+    root = execFileSync("git", ["rev-parse", "--show-toplevel"], {
+      cwd: dir,
+      encoding: "utf8",
+      windowsHide: true
+    }).trim();
   } catch {
     throw new Error(`not a git repository: ${dir}`);
   }
+  return resolve(root);
+}
+function sameRepoRoot(a, b, platform = process.platform) {
+  if (a === void 0) return false;
+  if (platform !== "win32") return a === b;
+  const norm = (p) => win32.resolve(p).toLowerCase();
+  return norm(a) === norm(b);
 }
 async function probeHealth(base) {
   try {
@@ -270,7 +292,7 @@ async function probeHealth(base) {
 }
 function decideServe(health, wantRoot) {
   if (health === null) return { action: "spawn" };
-  if (health.ok && health.repoRoot === wantRoot) return { action: "reuse" };
+  if (health.ok && sameRepoRoot(health.repoRoot, wantRoot)) return { action: "reuse" };
   const serving = health.repoRoot ? `a hub serving ${health.repoRoot}` : "something that answers /health without a repoRoot";
   return {
     action: "conflict",
@@ -284,7 +306,7 @@ function serverEntryPath() {
   return join(here, "..", "..", "server", "dist", "index.js");
 }
 function repoStateKey(repoRoot) {
-  const name = repoRoot.split("/").filter(Boolean).pop() ?? "repo";
+  const name = repoRoot.split(/[\\/]/).filter(Boolean).pop() ?? "repo";
   let hash = 0;
   for (let i = 0; i < repoRoot.length; i++) hash = hash * 31 + repoRoot.charCodeAt(i) >>> 0;
   return `${name.replace(/[^A-Za-z0-9._-]+/g, "-")}-${hash.toString(16)}`;
@@ -321,6 +343,8 @@ async function ensureServer(opts) {
       ...dbPath ? { SREV_DB_PATH: dbPath } : {}
     },
     detached: true,
+    // Without this, Windows opens a console window for the detached hub.
+    windowsHide: true,
     stdio: ["ignore", logFd, logFd]
   });
   child.unref();
@@ -329,7 +353,7 @@ async function ensureServer(opts) {
   while (Date.now() < deadline) {
     const h = await probeHealth(baseUrl);
     if (h?.ok) {
-      if (h.repoRoot !== repoRoot) {
+      if (!sameRepoRoot(h.repoRoot, repoRoot)) {
         throw new Error(`hub came up serving ${h.repoRoot ?? "unknown"}, expected ${repoRoot} \u2014 see ${logFile}`);
       }
       return {
@@ -365,7 +389,7 @@ function repoStateFiles(repoRoot) {
 }
 async function stopHubIfServing(baseUrl, repoRoot) {
   const health = await probeHealth(baseUrl);
-  if (!health?.ok || health.repoRoot !== repoRoot) return false;
+  if (!health?.ok || !sameRepoRoot(health.repoRoot, repoRoot)) return false;
   try {
     await shutdownHub(baseUrl);
   } catch {
@@ -442,7 +466,7 @@ function prettyShape(shape) {
 
 // packages/skill/src/map.ts
 import { readFileSync as readFileSync2, writeFileSync as writeFileSync2 } from "node:fs";
-import { resolve } from "node:path";
+import { resolve as resolve2 } from "node:path";
 function mapUrl(base, sessionId, level) {
   return `${base}/?session=${encodeURIComponent(sessionId)}&view=map${level ? `&level=${encodeURIComponent(level)}` : ""}`;
 }
@@ -614,7 +638,7 @@ async function getCommand(base, flags) {
 }
 async function exportCommand(base, flags) {
   const sessionId = flag(flags, "session");
-  const file = resolve(typeof flags.out === "string" && flags.out !== "" ? flags.out : "component-map.html");
+  const file = resolve2(typeof flags.out === "string" && flags.out !== "" ? flags.out : "component-map.html");
   const page = await getMapPage(base, sessionId);
   writeFileSync2(file, page);
   const bytes = Buffer.byteLength(page);
@@ -965,7 +989,7 @@ function isConnRefused(e) {
   const cause = e?.cause;
   return cause?.code === "ECONNREFUSED" || cause?.code === "ECONNRESET";
 }
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve3(process.argv[1])).href) {
   runCli(process.argv.slice(2)).catch((e) => {
     const err = isConnRefused(e) ? {
       error: `review hub not running at ${baseUrlFor(parseCliArgs(process.argv.slice(2)).flags)}`,
