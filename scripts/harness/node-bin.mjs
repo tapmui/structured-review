@@ -26,3 +26,8 @@ export function pnpmCommand(env = process.env) {
   if (entry && /pnpm\.(c?js|mjs)$/.test(entry)) return [process.execPath, entry];
   return ["pnpm"];
 }
+
+/** A bare "pnpm" on Windows is pnpm.cmd, which only starts through a shell. */
+export function needsShell(file, platform = process.platform) {
+  return platform === "win32" && file === "pnpm";
+}

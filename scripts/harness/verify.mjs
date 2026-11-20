@@ -3,7 +3,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { runChecks } from "./runner.mjs";
-import { pnpmCommand } from "./node-bin.mjs";
+import { needsShell, pnpmCommand } from "./node-bin.mjs";
 
 export function verificationNames({ strict, full }) {
   const names = [
@@ -33,7 +33,7 @@ export function spawnCommand([command, ...args], log = console.log, cwd) {
     const child = spawn(file, [...prefix, ...args], {
       cwd,
       stdio: "inherit",
-      shell: process.platform === "win32" && file === "pnpm",
+      shell: needsShell(file),
       windowsHide: true,
     });
     child.on("error", () => finish(1));

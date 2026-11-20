@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { nodeBin, pnpmCommand } from "../../scripts/harness/node-bin.mjs";
+import { needsShell, nodeBin, pnpmCommand } from "../../scripts/harness/node-bin.mjs";
 
 const repositoryRoot = resolve(import.meta.dirname, "../..");
 
@@ -47,5 +47,11 @@ describe("pnpmCommand", () => {
     expect(pnpmCommand({ npm_execpath: entry })).toEqual([process.execPath, entry]);
     expect(pnpmCommand({ npm_execpath: "/usr/lib/node_modules/npm/bin/npm-cli.js" })).toEqual(["pnpm"]);
     expect(pnpmCommand({})).toEqual(["pnpm"]);
+  });
+
+  it("needs a shell only for a bare pnpm on Windows", () => {
+    expect(needsShell("pnpm", "win32")).toBe(true);
+    expect(needsShell(process.execPath, "win32")).toBe(false);
+    expect(needsShell("pnpm", "linux")).toBe(false);
   });
 });

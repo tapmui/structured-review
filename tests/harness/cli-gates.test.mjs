@@ -208,6 +208,12 @@ describe("verify CLI gate", () => {
     expect(await spawnCommand([process.execPath, "-e", "process.exit(0)"], vi.fn())).toBe(0);
     expect(await spawnCommand([process.execPath, "-e", "process.exit(3)"], vi.fn())).toBe(3);
     expect(await spawnCommand([join(root, "missing-command")], vi.fn())).toBe(1);
+    // A signal-terminated child has no exit code; it counts as a failure.
+    expect(await spawnCommand([process.execPath, "-e", "process.kill(process.pid, 'SIGTERM')"], vi.fn())).toBe(1);
+  });
+
+  it("starts pnpm through the same entry on every platform", async () => {
+    expect(await spawnCommand(["pnpm", "--version"], vi.fn())).toBe(0);
   });
 });
 
