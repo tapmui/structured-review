@@ -23,8 +23,9 @@ _A small order-pricing review. Run `pnpm demo` to try it yourself._
 
 ## Try it
 
-You'll need **Node >= 22.13**, **npm** and **Git**. Linux and macOS are supported;
-Windows is not currently supported. Indexers download from npm on first use.
+You'll need **Node >= 22.13**, **npm** and **Git**. Linux, macOS and Windows 10/11
+are supported; see [Windows notes](#windows-notes). Indexers download from npm on
+first use.
 
 ### Claude Code
 
@@ -97,6 +98,19 @@ node packages/skill/dist/cli.js plan --session <sessionId> --auto --open
 
 This is also usable without an agent: `--auto` generates a mechanical plan.
 If the default port is busy, pass the same `--port N` to each command.
+
+### Windows notes
+
+- Use Node, npm and [Git for Windows](https://gitforwindows.org/); the plugin and
+  the commands above run from PowerShell.
+- Python indexing looks for `python`, then `python3`; set `SCIP_PYTHON` to choose
+  an interpreter. It lists installed packages through Python itself, so it works
+  where application control blocks `pip.exe`.
+- TypeScript and Python indexing are verified on Windows. Java and C# indexing
+  have not yet been tested there.
+- `pnpm verify` and `pnpm security:*` need Git for Windows: the security scripts
+  run under its bash, not a WSL `bash` that may come first on `PATH`
+  (`SREV_BASH` overrides). `pnpm security:setup` also needs Python 3.10 or newer.
 
 ## Walking a review
 
